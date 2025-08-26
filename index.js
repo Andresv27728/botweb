@@ -1,5 +1,5 @@
 import { Boom } from '@hapi/boom';
-import { default as makeWASocket, DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys';
+import * as Baileys from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
@@ -7,6 +7,7 @@ import axios from 'axios';
 import { server, io, appEvents } from './server.js';
 import { readSettings } from './lib/functions.js';
 
+const { default: makeWASocket, DisconnectReason, useMultiFileAuthState } = Baileys;
 const logger = pino({ level: 'silent' }).child({ level: 'silent' });
 const commands = new Map();
 let botSettings = {};
