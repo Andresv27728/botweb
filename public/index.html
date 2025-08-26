@@ -18,6 +18,7 @@
         #bot-settings-form input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         #bot-settings-form button { background-color: #25D366; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; }
         #save-status { margin-top: 10px; font-weight: bold; }
+        #timer-container { margin-top: 15px; font-size: 1.1em; color: #555; }
     </style>
 </head>
 <body>
@@ -25,6 +26,9 @@
         <div id="qr-container">
             <h1>Escanea el código QR para conectar</h1>
             <canvas id="qr"></canvas>
+            <div id="timer-container">
+                <p>El QR se actualizará en <span id="timer">30</span>s</p>
+            </div>
             <p>Por favor, escanea el código QR con tu teléfono para vincular el bot.</p>
         </div>
         <div id="dashboard">
@@ -58,12 +62,32 @@
         const dashboard = document.getElementById('dashboard');
         const botNameEl = document.getElementById('bot-name');
         const latencyEl = document.getElementById('latency');
+        const timerEl = document.getElementById('timer');
+        const timerContainer = document.getElementById('timer-container');
 
         const settingsForm = document.getElementById('bot-settings-form');
         const botNameInput = document.getElementById('botNameInput');
         const ownerNameInput = document.getElementById('ownerNameInput');
         const ownerNumberInput = document.getElementById('ownerNumberInput');
         const saveStatus = document.getElementById('save-status');
+
+        let countdownInterval;
+
+        function startTimer(duration) {
+            let timer = duration;
+            timerEl.textContent = timer;
+            timerContainer.style.display = 'block';
+
+            clearInterval(countdownInterval); // Limpiar cualquier temporizador anterior
+            countdownInterval = setInterval(() => {
+                timer--;
+                timerEl.textContent = timer;
+                if (timer <= 0) {
+                    clearInterval(countdownInterval);
+                    timerContainer.innerHTML = '<p>Esperando nuevo QR...</p>';
+                }
+            }, 1000);
+        }
 
         async function fetchSettings() {
             try {
@@ -73,7 +97,7 @@
                 botNameInput.value = settings.botName;
                 ownerNameInput.value = settings.ownerName;
                 ownerNumberInput.value = settings.ownerNumber;
-                botNameEl.textContent = settings.botName; // Actualizar también el dashboard
+                botNameEl.textContent = settings.botName;
             } catch (error) {
                 console.error('Error fetching settings:', error);
                 saveStatus.textContent = 'Error al cargar la configuración.';
@@ -112,13 +136,19 @@
             });
             qrContainer.style.display = 'block';
             dashboard.style.display = 'none';
+            timerContainer.innerHTML = '<p>El QR se actualizará en <span id="timer">30</span>s</p>';
+            // Re-asignar timerEl porque el innerHTML lo borró
+            const newTimerEl = document.getElementById('timer');
+            timerEl = newTimerEl ? newTimerEl : document.createElement('span'); // Fallback
+            startTimer(30);
         });
 
         socket.on('connected', (data) => {
             qrContainer.style.display = 'none';
             dashboard.style.display = 'block';
+            clearInterval(countdownInterval); // Detener el temporizador al conectar
             botNameEl.textContent = data.botName;
-            fetchSettings(); // Cargar la configuración cuando el bot se conecta
+            fetchSettings();
         });
 
         socket.on('bot-info', (data) => {
@@ -127,7 +157,6 @@
         });
 
         socket.on('settings-updated', (newSettings) => {
-            // Cuando la configuración se actualiza desde otro lado, refrescar los valores
             botNameInput.value = newSettings.botName;
             ownerNameInput.value = newSettings.ownerName;
             ownerNumberInput.value = newSettings.ownerNumber;
