@@ -12,11 +12,11 @@ export default {
             return await sock.sendMessage(msg.key.remoteJid, { text: 'Este comando solo puede ser usado por el propietario del bot.' }, { quoted: msg });
         }
 
-        await sock.sendMessage(msg.key.remoteJid, { text: 'Iniciando actualización desde el repositorio de GitHub...' }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { text: 'Forzando actualización desde el repositorio de GitHub...' }, { quoted: msg });
 
-        exec('git pull', (error, stdout, stderr) => {
+        exec('git reset --hard && git pull', (error, stdout, stderr) => {
             if (error) {
-                const errorMessage = `Error al ejecutar 'git pull':\n\n${stderr}`;
+                const errorMessage = `Error al ejecutar la actualización forzada:\n\n${stderr}`;
                 console.error(errorMessage);
                 sock.sendMessage(msg.key.remoteJid, { text: errorMessage }, { quoted: msg });
                 return;
