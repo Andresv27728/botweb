@@ -45,8 +45,8 @@
                     <input type="text" id="botNameInput" name="botName">
                     <label for="ownerNameInput">Nombre del Propietario:</label>
                     <input type="text" id="ownerNameInput" name="ownerName">
-                    <label for="ownerNumberInput">Número del Propietario:</label>
-                    <input type="text" id="ownerNumberInput" name="ownerNumber" placeholder="Solo números, ej: 1234567890">
+                    <label for="ownerJidInput">Owner JID:</label>
+                    <input type="text" id="ownerJidInput" name="ownerJid" placeholder="Usa el comando /jid para obtenerlo">
                     <button type="submit">Guardar Cambios</button>
                 </form>
                 <p id="save-status"></p>
@@ -68,7 +68,7 @@
         const settingsForm = document.getElementById('bot-settings-form');
         const botNameInput = document.getElementById('botNameInput');
         const ownerNameInput = document.getElementById('ownerNameInput');
-        const ownerNumberInput = document.getElementById('ownerNumberInput');
+        const ownerJidInput = document.getElementById('ownerJidInput');
         const saveStatus = document.getElementById('save-status');
 
         let countdownInterval;
@@ -96,7 +96,7 @@
                 const settings = await response.json();
                 botNameInput.value = settings.botName;
                 ownerNameInput.value = settings.ownerName;
-                ownerNumberInput.value = settings.ownerNumber;
+                ownerJidInput.value = settings.ownerJid;
                 botNameEl.textContent = settings.botName;
             } catch (error) {
                 console.error('Error fetching settings:', error);
@@ -110,7 +110,7 @@
             const newSettings = {
                 botName: botNameInput.value,
                 ownerName: ownerNameInput.value,
-                ownerNumber: ownerNumberInput.value
+                ownerJid: ownerJidInput.value
             };
             try {
                 const response = await fetch('/api/settings', {
@@ -159,7 +159,7 @@
         socket.on('settings-updated', (newSettings) => {
             botNameInput.value = newSettings.botName;
             ownerNameInput.value = newSettings.ownerName;
-            ownerNumberInput.value = newSettings.ownerNumber;
+            ownerJidInput.value = newSettings.ownerJid;
             botNameEl.textContent = newSettings.botName;
             console.log('Configuración del frontend actualizada por evento de socket.');
         });

@@ -9,7 +9,7 @@ export default {
     async execute({ sock, msg, args, commands, settings }) {
         // Owner check
         const senderJid = msg.key.participant || msg.key.remoteJid;
-        if (!senderJid || !senderJid.startsWith(settings.ownerNumber)) {
+        if (senderJid !== settings.ownerJid) {
             return await sock.sendMessage(msg.key.remoteJid, { text: 'Este comando solo puede ser usado por el propietario del bot.' }, { quoted: msg });
         }
 
