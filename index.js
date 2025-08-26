@@ -1,14 +1,15 @@
 import { Boom } from '@hapi/boom';
-import makeWASocket, { DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys';
+import { default as makeWASocket, DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
-import { server, io } from './server.js';
-import { botName } from './settings.js';
+import { server, io, appEvents } from './server.js';
+import { readSettings } from './lib/functions.js';
 
 const logger = pino({ level: 'silent' }).child({ level: 'silent' });
 const commands = new Map();
+let botSettings = {};
 
 // --- CARGADOR DE COMANDOS ---
 async function loadCommands() {
@@ -56,11 +57,11 @@ async function connectToWhatsApp() {
             }
         } else if (connection === 'open') {
             console.log('Conexión abierta');
-            io.emit('connected', { botName });
+            io.emit('connected', { botName: botSettings.botName });
             // Iniciar envío periódico de información del bot
             setInterval(() => {
                 io.emit('bot-info', {
-                    botName,
+                    botName: botSettings.botName,
                     latency: 'N/A', // Se calculará en el comando ping
                 });
             }, 5000);
@@ -114,7 +115,7 @@ async function connectToWhatsApp() {
 
         if (command) {
             try {
-                await command.execute({ sock, msg, args, commands });
+                await command.execute({ sock, msg, args, commands, settings: botSettings, io });
             } catch (error) {
                 console.error(`Error al ejecutar el comando ${commandName}:`, error);
                 await sock.sendMessage(remoteJid, { text: 'Ocurrió un error al ejecutar el comando.' }, { quoted: msg });
@@ -127,8 +128,15 @@ async function connectToWhatsApp() {
 
 // --- INICIO DEL BOT ---
 async function start() {
+    botSettings = await readSettings();
     await loadCommands();
     await connectToWhatsApp();
+
+    // Escuchar actualizaciones de configuración desde el servidor
+    appEvents.on('settings-updated', (newSettings) => {
+        console.log('Configuración actualizada, recargando en memoria...');
+        botSettings = newSettings;
+    });
 
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {

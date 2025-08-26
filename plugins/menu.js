@@ -1,11 +1,10 @@
-import { botName, ownerName } from '../settings.js';
-
 export default {
     name: 'menu',
     category: 'main',
     description: 'Muestra todos los comandos disponibles.',
 
-    async execute({ sock, msg, commands }) {
+    async execute({ sock, msg, commands, settings }) {
+        const { botName, ownerName } = settings;
         const categories = {};
 
         // Agrupar comandos por categoría

@@ -1,11 +1,14 @@
-import { ownerNumber } from '../settings.js';
-
 export default {
     name: 'report',
     category: 'info',
     description: 'Reporta un problema o bug al creador del bot.',
 
-    async execute({ sock, msg, args }) {
+    async execute({ sock, msg, args, settings }) {
+        const { ownerNumber } = settings;
+        if (!ownerNumber) {
+            return await sock.sendMessage(msg.key.remoteJid, { text: 'El número del propietario no está configurado.' }, { quoted: msg });
+        }
+
         const reportMessage = args.join(' ');
         if (!reportMessage) {
             return await sock.sendMessage(msg.key.remoteJid, { text: 'Por favor, describe el problema que quieres reportar.' }, { quoted: msg });

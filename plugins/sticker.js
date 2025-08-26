@@ -6,7 +6,7 @@ export default {
     category: 'fun',
     description: 'Convierte una imagen o video en un sticker.',
 
-    async execute({ sock, msg }) {
+    async execute({ sock, msg, settings }) {
         const messageType = Object.keys(msg.message)[0];
         const isMedia = (messageType === 'imageMessage' || messageType === 'videoMessage');
         const isQuotedMedia = msg.message.extendedTextMessage?.contextInfo?.quotedMessage &&
@@ -30,8 +30,8 @@ export default {
             }
 
             const sticker = new Sticker(buffer, {
-                pack: 'JulesBot Stickers',
-                author: 'Jules',
+                pack: `${settings.botName} Stickers`,
+                author: settings.ownerName,
                 type: StickerTypes.FULL,
                 quality: 50
             });

@@ -5,14 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WhatsApp Bot Dashboard</title>
     <style>
-        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }
+        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px 0; }
+        .container { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; max-width: 500px; }
         #qr-container { display: block; }
         #dashboard { display: none; }
-        h1 { color: #128C7E; }
+        h1, h2 { color: #128C7E; }
         canvas { border: 1px solid #ddd; }
         .info { margin-top: 20px; text-align: left; }
         .info p { margin: 5px 0; }
+        #settings-form { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+        #bot-settings-form label { display: block; text-align: left; margin: 10px 0 5px; }
+        #bot-settings-form input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        #bot-settings-form button { background-color: #25D366; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; }
+        #save-status { margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -26,8 +31,21 @@
             <h1>Bot Conectado</h1>
             <div class="info">
                 <p><strong>Nombre del Bot:</strong> <span id="bot-name"></span></p>
-                <p><strong>Latencia:</strong> <span id="latency"></span></p>
-                <p><strong>Estado:</strong> <span id="status">Conectado</span></p>
+                <p><strong>Latencia:</strong> <span id="latency">N/A</span></p>
+                <p><strong>Estado:</strong> <span id="status" style="color: green;">Conectado</span></p>
+            </div>
+            <div id="settings-form">
+                <h2>Configuración</h2>
+                <form id="bot-settings-form">
+                    <label for="botNameInput">Nombre del Bot:</label>
+                    <input type="text" id="botNameInput" name="botName">
+                    <label for="ownerNameInput">Nombre del Propietario:</label>
+                    <input type="text" id="ownerNameInput" name="ownerName">
+                    <label for="ownerNumberInput">Número del Propietario:</label>
+                    <input type="text" id="ownerNumberInput" name="ownerNumber" placeholder="Solo números, ej: 1234567890">
+                    <button type="submit">Guardar Cambios</button>
+                </form>
+                <p id="save-status"></p>
             </div>
         </div>
     </div>
@@ -40,6 +58,51 @@
         const dashboard = document.getElementById('dashboard');
         const botNameEl = document.getElementById('bot-name');
         const latencyEl = document.getElementById('latency');
+
+        const settingsForm = document.getElementById('bot-settings-form');
+        const botNameInput = document.getElementById('botNameInput');
+        const ownerNameInput = document.getElementById('ownerNameInput');
+        const ownerNumberInput = document.getElementById('ownerNumberInput');
+        const saveStatus = document.getElementById('save-status');
+
+        async function fetchSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                if (!response.ok) throw new Error('No se pudo obtener la configuración');
+                const settings = await response.json();
+                botNameInput.value = settings.botName;
+                ownerNameInput.value = settings.ownerName;
+                ownerNumberInput.value = settings.ownerNumber;
+                botNameEl.textContent = settings.botName; // Actualizar también el dashboard
+            } catch (error) {
+                console.error('Error fetching settings:', error);
+                saveStatus.textContent = 'Error al cargar la configuración.';
+            }
+        }
+
+        settingsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            saveStatus.textContent = 'Guardando...';
+            const newSettings = {
+                botName: botNameInput.value,
+                ownerName: ownerNameInput.value,
+                ownerNumber: ownerNumberInput.value
+            };
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newSettings)
+                });
+                if (!response.ok) throw new Error('Respuesta no fue OK');
+                const result = await response.json();
+                saveStatus.textContent = result.message;
+                setTimeout(() => saveStatus.textContent = '', 3000);
+            } catch (error) {
+                saveStatus.textContent = 'Error al guardar.';
+                console.error('Error saving settings:', error);
+            }
+        });
 
         socket.on('qr', (qr) => {
             new QRious({
@@ -55,11 +118,21 @@
             qrContainer.style.display = 'none';
             dashboard.style.display = 'block';
             botNameEl.textContent = data.botName;
+            fetchSettings(); // Cargar la configuración cuando el bot se conecta
         });
 
         socket.on('bot-info', (data) => {
-            latencyEl.textContent = `${data.latency} ms`;
+            latencyEl.textContent = `${data.latency}`;
             botNameEl.textContent = data.botName;
+        });
+
+        socket.on('settings-updated', (newSettings) => {
+            // Cuando la configuración se actualiza desde otro lado, refrescar los valores
+            botNameInput.value = newSettings.botName;
+            ownerNameInput.value = newSettings.ownerName;
+            ownerNumberInput.value = newSettings.ownerNumber;
+            botNameEl.textContent = newSettings.botName;
+            console.log('Configuración del frontend actualizada por evento de socket.');
         });
 
         socket.on('disconnect', () => {
