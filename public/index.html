@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Bot Dashboard</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }
+        #qr-container { display: block; }
+        #dashboard { display: none; }
+        h1 { color: #128C7E; }
+        canvas { border: 1px solid #ddd; }
+        .info { margin-top: 20px; text-align: left; }
+        .info p { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="qr-container">
+            <h1>Escanea el código QR para conectar</h1>
+            <canvas id="qr"></canvas>
+            <p>Por favor, escanea el código QR con tu teléfono para vincular el bot.</p>
+        </div>
+        <div id="dashboard">
+            <h1>Bot Conectado</h1>
+            <div class="info">
+                <p><strong>Nombre del Bot:</strong> <span id="bot-name"></span></p>
+                <p><strong>Latencia:</strong> <span id="latency"></span></p>
+                <p><strong>Estado:</strong> <span id="status">Conectado</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+    <script>
+        const socket = io();
+        const qrContainer = document.getElementById('qr-container');
+        const dashboard = document.getElementById('dashboard');
+        const botNameEl = document.getElementById('bot-name');
+        const latencyEl = document.getElementById('latency');
+
+        socket.on('qr', (qr) => {
+            new QRious({
+                element: document.getElementById('qr'),
+                value: qr,
+                size: 250,
+            });
+            qrContainer.style.display = 'block';
+            dashboard.style.display = 'none';
+        });
+
+        socket.on('connected', (data) => {
+            qrContainer.style.display = 'none';
+            dashboard.style.display = 'block';
+            botNameEl.textContent = data.botName;
+        });
+
+        socket.on('bot-info', (data) => {
+            latencyEl.textContent = `${data.latency} ms`;
+            botNameEl.textContent = data.botName;
+        });
+
+        socket.on('disconnect', () => {
+            qrContainer.style.display = 'block';
+            dashboard.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
