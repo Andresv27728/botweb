@@ -1,5 +1,5 @@
 import { Boom } from '@hapi/boom';
-import * as Baileys from '@whiskeysockets/baileys';
+import { makeWASocket, DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
@@ -7,7 +7,6 @@ import axios from 'axios';
 import { server, io, appEvents } from './server.js';
 import { readSettings } from './lib/functions.js';
 
-const { default: makeWASocket, DisconnectReason, useMultiFileAuthState } = Baileys;
 const logger = pino({ level: 'silent' }).child({ level: 'silent' });
 const commands = new Map();
 let botSettings = {};
@@ -59,13 +58,6 @@ async function connectToWhatsApp() {
         } else if (connection === 'open') {
             console.log('Conexión abierta');
             io.emit('connected', { botName: botSettings.botName });
-            // Iniciar envío periódico de información del bot
-            setInterval(() => {
-                io.emit('bot-info', {
-                    botName: botSettings.botName,
-                    latency: 'N/A', // Se calculará en el comando ping
-                });
-            }, 5000);
         }
     });
 
@@ -138,6 +130,14 @@ async function start() {
         console.log('Configuración actualizada, recargando en memoria...');
         botSettings = newSettings;
     });
+
+    // Iniciar envío periódico de información del bot al dashboard
+    setInterval(() => {
+        io.emit('bot-info', {
+            botName: botSettings.botName,
+            latency: 'N/A', // Se actualizará con el comando ping
+        });
+    }, 5000);
 
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {
