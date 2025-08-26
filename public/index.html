@@ -45,8 +45,10 @@
                     <input type="text" id="botNameInput" name="botName">
                     <label for="ownerNameInput">Nombre del Propietario:</label>
                     <input type="text" id="ownerNameInput" name="ownerName">
-                    <label for="ownerJidInput">Owner JID:</label>
-                    <input type="text" id="ownerJidInput" name="ownerJid" placeholder="Usa el comando /jid para obtenerlo">
+                    <label for="ownerLidJidInput">Owner JID (LID - para grupos):</label>
+                    <input type="text" id="ownerLidJidInput" name="ownerLidJid" placeholder="Usa /jid en un grupo">
+                    <label for="ownerPhoneJidInput">Owner JID (Teléfono - para chat privado):</label>
+                    <input type="text" id="ownerPhoneJidInput" name="ownerPhoneJid" placeholder="Usa /jid en chat privado con el bot">
                     <button type="submit">Guardar Cambios</button>
                 </form>
                 <p id="save-status"></p>
@@ -68,7 +70,8 @@
         const settingsForm = document.getElementById('bot-settings-form');
         const botNameInput = document.getElementById('botNameInput');
         const ownerNameInput = document.getElementById('ownerNameInput');
-        const ownerJidInput = document.getElementById('ownerJidInput');
+        const ownerLidJidInput = document.getElementById('ownerLidJidInput');
+        const ownerPhoneJidInput = document.getElementById('ownerPhoneJidInput');
         const saveStatus = document.getElementById('save-status');
 
         let countdownInterval;
@@ -96,7 +99,8 @@
                 const settings = await response.json();
                 botNameInput.value = settings.botName;
                 ownerNameInput.value = settings.ownerName;
-                ownerJidInput.value = settings.ownerJid;
+                ownerLidJidInput.value = settings.ownerLidJid || '';
+                ownerPhoneJidInput.value = settings.ownerPhoneJid || '';
                 botNameEl.textContent = settings.botName;
             } catch (error) {
                 console.error('Error fetching settings:', error);
@@ -110,7 +114,8 @@
             const newSettings = {
                 botName: botNameInput.value,
                 ownerName: ownerNameInput.value,
-                ownerJid: ownerJidInput.value
+                ownerLidJid: ownerLidJidInput.value,
+                ownerPhoneJid: ownerPhoneJidInput.value
             };
             try {
                 const response = await fetch('/api/settings', {
@@ -159,7 +164,8 @@
         socket.on('settings-updated', (newSettings) => {
             botNameInput.value = newSettings.botName;
             ownerNameInput.value = newSettings.ownerName;
-            ownerJidInput.value = newSettings.ownerJid;
+            ownerLidJidInput.value = newSettings.ownerLidJid || '';
+            ownerPhoneJidInput.value = newSettings.ownerPhoneJid || '';
             botNameEl.textContent = newSettings.botName;
             console.log('Configuración del frontend actualizada por evento de socket.');
         });

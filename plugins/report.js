@@ -4,9 +4,9 @@ export default {
     description: 'Reporta un problema o bug al creador del bot.',
 
     async execute({ sock, msg, args, settings }) {
-        const { ownerJid } = settings;
-        if (!ownerJid) {
-            return await sock.sendMessage(msg.key.remoteJid, { text: 'El JID del propietario no está configurado.' }, { quoted: msg });
+        const { ownerPhoneJid } = settings;
+        if (!ownerPhoneJid) {
+            return await sock.sendMessage(msg.key.remoteJid, { text: 'El JID de teléfono del propietario no está configurado en el dashboard.' }, { quoted: msg });
         }
 
         const reportMessage = args.join(' ');
@@ -20,7 +20,7 @@ export default {
         const fullReport = `*Nuevo Reporte de Bug/Problema*\n\n*De:* ${senderName} (${senderJid})\n*Reporte:* ${reportMessage}`;
 
         try {
-            await sock.sendMessage(ownerJid, { text: fullReport });
+            await sock.sendMessage(ownerPhoneJid, { text: fullReport });
             await sock.sendMessage(msg.key.remoteJid, { text: '¡Gracias! Tu reporte ha sido enviado al creador.' }, { quoted: msg });
         } catch (error) {
             console.error('Error al enviar el reporte:', error);
