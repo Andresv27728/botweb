@@ -122,6 +122,22 @@ async function connectToWhatsApp() {
     return sock;
 }
 
+// --- FUNCIÓN KEEP ALIVE PARA RENDER ---
+function keepAlive() {
+    const url = process.env.RENDER_EXTERNAL_URL;
+    if (url) {
+        setInterval(() => {
+            console.log('Ping para mantener el bot activo...');
+            axios.get(url).catch(err => {
+                console.error('Error durante el ping:', err.message);
+            });
+        }, 14 * 60 * 1000); // 14 minutos
+        console.log('Servicio Keep-Alive para Render activado.');
+    } else {
+        console.log('Servicio Keep-Alive desactivado (no se detectó URL de Render).');
+    }
+}
+
 // --- INICIO DEL BOT ---
 async function start() {
     botSettings = await readSettings();
@@ -146,6 +162,7 @@ async function start() {
     server.listen(PORT, () => {
         console.log(`Servidor escuchando en el puerto ${PORT}`);
         console.log(`Visita http://localhost:${PORT} para ver el QR y el dashboard.`);
+        keepAlive(); // Activar el servicio Keep-Alive
     });
 }
 
