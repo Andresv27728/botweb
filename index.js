@@ -40,7 +40,7 @@ async function connectToWhatsApp() {
         version,
         auth: state,
         logger,
-        browser: ['JulesBot', 'Chrome', '1.0.0'],
+        browser: ['JulesBot', 'Opera GX', '1.0.0'],
     });
 
     sock.ev.on('creds.update', saveCreds);
