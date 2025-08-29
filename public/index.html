@@ -17,6 +17,7 @@
         #bot-settings-form label { display: block; text-align: left; margin: 10px 0 5px; }
         #bot-settings-form input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         #bot-settings-form button { background-color: #25D366; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; }
+        #update-button { background-color: #f39c12; }
         #save-status { margin-top: 10px; font-weight: bold; }
         #timer-container { margin-top: 15px; font-size: 1.1em; color: #555; }
     </style>
@@ -38,6 +39,12 @@
                 <p><strong>Latencia:</strong> <span id="latency">N/A</span></p>
                 <p><strong>Estado:</strong> <span id="status" style="color: green;">Conectado</span></p>
             </div>
+            <div id="stats-container" class="info">
+                <h2>Rendimiento del Servidor</h2>
+                <p><strong>CPU:</strong> <span id="cpu-usage">Cargando...</span></p>
+                <p><strong>Memoria:</strong> <span id="memory-usage">Cargando...</span></p>
+                <p><strong>Tiempo Activo:</strong> <span id="uptime">Cargando...</span></p>
+            </div>
             <div id="settings-form">
                 <h2>Configuración</h2>
                 <form id="bot-settings-form">
@@ -52,6 +59,11 @@
                     <button type="submit">Guardar Cambios</button>
                 </form>
                 <p id="save-status"></p>
+                <div id="update-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <h2>Actualización del Bot</h2>
+                    <p>Actualiza el bot a la última versión desde GitHub. Esto reiniciará el proceso.</p>
+                    <button type="button" id="update-button" class="button">Actualizar Ahora</button>
+                </div>
             </div>
         </div>
     </div>
@@ -73,6 +85,7 @@
         const ownerLidJidInput = document.getElementById('ownerLidJidInput');
         const ownerPhoneJidInput = document.getElementById('ownerPhoneJidInput');
         const saveStatus = document.getElementById('save-status');
+        const updateButton = document.getElementById('update-button');
 
         let countdownInterval;
 
@@ -173,6 +186,34 @@
         socket.on('disconnect', () => {
             qrContainer.style.display = 'block';
             dashboard.style.display = 'none';
+        });
+
+        // --- Server Stats Handler ---
+        const cpuUsageEl = document.getElementById('cpu-usage');
+        const memoryUsageEl = document.getElementById('memory-usage');
+        const uptimeEl = document.getElementById('uptime');
+
+        socket.on('server-stats', (data) => {
+            if(cpuUsageEl) cpuUsageEl.textContent = data.cpu;
+            if(memoryUsageEl) memoryUsageEl.textContent = data.memory;
+            if(uptimeEl) uptimeEl.textContent = data.uptime;
+        });
+
+        // --- Update Button Handler ---
+        updateButton.addEventListener('click', async () => {
+            const confirmed = confirm('¿Estás seguro de que quieres actualizar el bot? Esto reiniciará el proceso.');
+            if (confirmed) {
+                saveStatus.textContent = 'Iniciando actualización...';
+                try {
+                    const response = await fetch('/api/update', { method: 'POST' });
+                    const result = await response.json();
+                    saveStatus.textContent = result.message;
+                    // El bot se reiniciará, no es necesario hacer nada más aquí.
+                } catch (error) {
+                    saveStatus.textContent = 'Error al iniciar la actualización.';
+                    console.error('Error on update:', error);
+                }
+            }
         });
     </script>
 </body>
