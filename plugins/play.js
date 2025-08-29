@@ -1,5 +1,5 @@
 import ytSearch from 'yt-search';
-import axios from 'axios';
+import { playMessageCache } from '../../index.js';
 
 export default {
     name: 'play',
@@ -23,22 +23,27 @@ export default {
             }
 
             const videoUrl = video.url;
-            const caption = `*Título:* ${video.title}\n*Duración:* ${video.timestamp}\n*Autor:* ${video.author.name}`;
+            const caption = `*Título:* ${video.title}\n*Duración:* ${video.timestamp}\n*Autor:* ${video.author.name}\n\nReacciona a este mensaje para descargar:\n♬ - Audio\n📹 - Video`;
 
-            const buttons = [
-                { buttonId: `download_audio:${videoUrl}`, buttonText: { displayText: 'Audio 🎵' }, type: 1 },
-                { buttonId: `download_video:${videoUrl}`, buttonText: { displayText: 'Video 🎥' }, type: 1 }
-            ];
-
-            const buttonMessage = {
+            const sentMsg = await sock.sendMessage(msg.key.remoteJid, {
                 image: { url: video.thumbnail },
-                caption: caption,
-                footer: 'Elige un formato para descargar',
-                buttons: buttons,
-                headerType: 4
-            };
+                caption: caption
+            }, { quoted: msg });
 
-            await sock.sendMessage(msg.key.remoteJid, buttonMessage, { quoted: msg });
+            // Add reactions to the message
+            await sock.sendMessage(msg.key.remoteJid, { react: { text: '♬', key: sentMsg.key } });
+            await sock.sendMessage(msg.key.remoteJid, { react: { text: '📹', key: sentMsg.key } });
+
+            // Store the message key and URL in the cache for the reaction handler
+            playMessageCache.set(sentMsg.key.id, { url: videoUrl, quotedMsg: msg });
+
+            // Optional: Remove from cache after a timeout to prevent memory leaks
+            setTimeout(() => {
+                if (playMessageCache.has(sentMsg.key.id)) {
+                    playMessageCache.delete(sentMsg.key.id);
+                    console.log(`Cache entry for ${sentMsg.key.id} expired and was removed.`);
+                }
+            }, 5 * 60 * 1000); // 5 minutes
 
         } catch (error) {
             console.error('Error en el comando play:', error);
