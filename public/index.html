@@ -5,96 +5,646 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WhatsApp Bot Dashboard</title>
     <style>
-        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px 0; }
-        .container { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; max-width: 500px; }
-        #qr-container { display: block; }
-        #dashboard { display: none; }
-        h1, h2 { color: #128C7E; }
-        canvas { border: 1px solid #ddd; }
-        .info { margin-top: 20px; text-align: left; }
-        .info p { margin: 5px 0; }
-        #settings-form { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
-        #bot-settings-form label { display: block; text-align: left; margin: 10px 0 5px; }
-        #bot-settings-form input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        #bot-settings-form button { background-color: #25D366; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; }
-        #update-button { background-color: #f39c12; }
-        #save-status { margin-top: 10px; font-weight: bold; }
-        #timer-container { margin-top: 15px; font-size: 1.1em; color: #555; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #ffffff;
+            color: #1a1a1a;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 1000;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            letter-spacing: -0.02em;
+        }
+
+        .hamburger {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1001;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger span {
+            width: 100%;
+            height: 2px;
+            background: #1a1a1a;
+            transition: all 0.3s ease;
+            transform-origin: center;
+        }
+
+        .hamburger span:nth-child(2) {
+            margin: 6px 0;
+        }
+
+        .hamburger.active span:first-child {
+            transform: rotate(45deg) translate(8px, 8px);
+        }
+
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger.active span:last-child {
+            transform: rotate(-45deg) translate(8px, -8px);
+        }
+
+        /* Navigation */
+        .nav-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .nav-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .nav-menu {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 280px;
+            height: 100vh;
+            background: #ffffff;
+            z-index: 999;
+            padding: 100px 30px 30px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border-left: 1px solid #e5e5e5;
+        }
+
+        .nav-menu.active {
+            right: 0;
+        }
+
+        .nav-item {
+            padding: 15px 0;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-item:hover {
+            color: #1a1a1a;
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: 70px;
+            min-height: calc(100vh - 70px);
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .section {
+            display: none;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 30px;
+            letter-spacing: -0.03em;
+            animation: slideInLeft 0.6s ease-out;
+        }
+
+        /* QR Section */
+        .qr-container {
+            text-align: center;
+            padding: 60px 0;
+        }
+
+        .qr-wrapper {
+            background: #ffffff;
+            border: 2px solid #f0f0f0;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        #qr {
+            border-radius: 12px;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .timer-container {
+            margin-top: 30px;
+            font-size: 1rem;
+            color: #666;
+            animation: fadeInUp 0.8s ease-out 0.3s both;
+        }
+
+        /* Dashboard Cards */
+        .card {
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .status-connected {
+            color: #22c55e;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 25px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e5e5;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #ffffff;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #1a1a1a;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-secondary {
+            background: #666;
+            color: #ffffff;
+        }
+
+        .btn-secondary:hover {
+            background: #777;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: 500;
+            text-align: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .status-message.show {
+            opacity: 1;
+            animation: slideInUp 0.3s ease-out;
+        }
+
+        .status-message.success {
+            background: #f0fdf4;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status-message.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #1a1a1a;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInUp {
+            from {
+                transform: translateY(20px);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .header {
+                padding: 0 15px;
+            }
+
+            .main-content {
+                padding: 20px 15px;
+            }
+
+            .section-title {
+                font-size: 2rem;
+                margin-bottom: 20px;
+            }
+
+            .card {
+                padding: 20px;
+                margin-bottom: 15px;
+            }
+
+            .qr-wrapper {
+                padding: 20px;
+                margin: 20px 0;
+            }
+
+            .nav-menu {
+                width: 100%;
+                right: -100%;
+            }
+
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="qr-container">
-            <h1>Escanea el código QR para conectar</h1>
-            <canvas id="qr"></canvas>
-            <div id="timer-container">
-                <p>El QR se actualizará en <span id="timer">30</span>s</p>
-            </div>
-            <p>Por favor, escanea el código QR con tu teléfono para vincular el bot.</p>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">Bot Dashboard</div>
+        <div class="hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
         </div>
-        <div id="dashboard">
-            <h1>Bot Conectado</h1>
-            <div class="info">
-                <p><strong>Nombre del Bot:</strong> <span id="bot-name"></span></p>
-                <p><strong>Latencia:</strong> <span id="latency">N/A</span></p>
-                <p><strong>Estado:</strong> <span id="status" style="color: green;">Conectado</span></p>
-            </div>
-            <div id="stats-container" class="info">
-                <h2>Rendimiento del Servidor</h2>
-                <p><strong>CPU:</strong> <span id="cpu-usage">Cargando...</span></p>
-                <p><strong>Memoria:</strong> <span id="memory-usage">Cargando...</span></p>
-                <p><strong>Tiempo Activo:</strong> <span id="uptime">Cargando...</span></p>
-            </div>
-            <div id="settings-form">
-                <h2>Configuración</h2>
-                <form id="bot-settings-form">
-                    <label for="botNameInput">Nombre del Bot:</label>
-                    <input type="text" id="botNameInput" name="botName">
-                    <label for="ownerNameInput">Nombre del Propietario:</label>
-                    <input type="text" id="ownerNameInput" name="ownerName">
-                    <label for="ownerLidJidInput">Owner JID (LID - para grupos):</label>
-                    <input type="text" id="ownerLidJidInput" name="ownerLidJid" placeholder="Usa /jid en un grupo">
-                    <label for="ownerPhoneJidInput">Owner JID (Teléfono - para chat privado):</label>
-                    <input type="text" id="ownerPhoneJidInput" name="ownerPhoneJid" placeholder="Usa /jid en chat privado con el bot">
-                    <button type="submit">Guardar Cambios</button>
-                </form>
-                <p id="save-status"></p>
-                <div id="update-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-                    <h2>Actualización del Bot</h2>
-                    <p>Actualiza el bot a la última versión desde GitHub. Esto reiniciará el proceso.</p>
-                    <button type="button" id="update-button" class="button">Actualizar Ahora</button>
+    </header>
+
+    <!-- Navigation -->
+    <div class="nav-overlay" id="navOverlay"></div>
+    <nav class="nav-menu" id="navMenu">
+        <div class="nav-item active" data-section="connection">Conexión</div>
+        <div class="nav-item" data-section="dashboard">Estado del Bot</div>
+        <div class="nav-item" data-section="server">Servidor</div>
+        <div class="nav-item" data-section="settings">Configuración</div>
+        <div class="nav-item" data-section="update">Actualizar</div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Connection Section -->
+            <section id="connection" class="section active">
+                <h1 class="section-title">Conectar Bot</h1>
+                <div class="qr-container">
+                    <div class="qr-wrapper">
+                        <canvas id="qr"></canvas>
+                    </div>
+                    <div class="timer-container" id="timerContainer">
+                        <p>El QR se actualizará en <span id="timer">30</span>s</p>
+                    </div>
+                    <p style="color: #666; margin-top: 20px;">
+                        Escanea el código QR con WhatsApp para conectar tu bot
+                    </p>
                 </div>
-            </div>
+            </section>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section">
+                <h1 class="section-title">Estado del Bot</h1>
+                <div class="card">
+                    <h2 class="card-title">Información del Bot</h2>
+                    <div class="info-row">
+                        <span class="info-label">Nombre del Bot</span>
+                        <span class="info-value" id="botName">Cargando...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Latencia</span>
+                        <span class="info-value" id="latency">N/A</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Estado</span>
+                        <span class="info-value status-connected" id="status">Conectado</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Server Section -->
+            <section id="server" class="section">
+                <h1 class="section-title">Rendimiento del Servidor</h1>
+                <div class="card">
+                    <h2 class="card-title">Estadísticas del Sistema</h2>
+                    <div class="info-row">
+                        <span class="info-label">CPU</span>
+                        <span class="info-value" id="cpuUsage">Cargando...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Memoria</span>
+                        <span class="info-value" id="memoryUsage">Cargando...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Tiempo Activo</span>
+                        <span class="info-value" id="uptime">Cargando...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings" class="section">
+                <h1 class="section-title">Configuración</h1>
+                <div class="card">
+                    <h2 class="card-title">Configuración del Bot</h2>
+                    <form id="botSettingsForm">
+                        <div class="form-group">
+                            <label class="form-label" for="botNameInput">Nombre del Bot</label>
+                            <input type="text" class="form-input" id="botNameInput" name="botName">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="ownerNameInput">Nombre del Propietario</label>
+                            <input type="text" class="form-input" id="ownerNameInput" name="ownerName">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="ownerLidJidInput">Owner JID (LID - para grupos)</label>
+                            <input type="text" class="form-input" id="ownerLidJidInput" name="ownerLidJid" placeholder="Usa /jid en un grupo">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="ownerPhoneJidInput">Owner JID (Teléfono - para chat privado)</label>
+                            <input type="text" class="form-input" id="ownerPhoneJidInput" name="ownerPhoneJid" placeholder="Usa /jid en chat privado con el bot">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    </form>
+                    <div class="status-message" id="saveStatus"></div>
+                </div>
+            </section>
+
+            <!-- Update Section -->
+            <section id="update" class="section">
+                <h1 class="section-title">Actualizar Bot</h1>
+                <div class="card">
+                    <h2 class="card-title">Actualización del Sistema</h2>
+                    <p style="color: #666; margin-bottom: 25px;">
+                        Actualiza el bot a la última versión desde GitHub. Esto reiniciará el proceso del bot.
+                    </p>
+                    <button type="button" class="btn btn-secondary" id="updateButton">
+                        Actualizar Ahora
+                    </button>
+                    <div class="status-message" id="updateStatus"></div>
+                </div>
+            </section>
         </div>
-    </div>
+    </main>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     <script>
+        // Navigation functionality
+        const hamburger = document.getElementById('hamburger');
+        const navMenu = document.getElementById('navMenu');
+        const navOverlay = document.getElementById('navOverlay');
+        const navItems = document.querySelectorAll('.nav-item');
+        const sections = document.querySelectorAll('.section');
+
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            navMenu.classList.toggle('active');
+            navOverlay.classList.toggle('active');
+        });
+
+        navOverlay.addEventListener('click', () => {
+            hamburger.classList.remove('active');
+            navMenu.classList.remove('active');
+            navOverlay.classList.remove('active');
+        });
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const sectionId = item.dataset.section;
+                
+                // Update active nav item
+                navItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                
+                // Update active section
+                sections.forEach(section => section.classList.remove('active'));
+                document.getElementById(sectionId).classList.add('active');
+                
+                // Close menu
+                hamburger.classList.remove('active');
+                navMenu.classList.remove('active');
+                navOverlay.classList.remove('active');
+            });
+        });
+
+        // Socket.io functionality
         const socket = io();
-        const qrContainer = document.getElementById('qr-container');
-        const dashboard = document.getElementById('dashboard');
-        const botNameEl = document.getElementById('bot-name');
+        
+        // Elements
+        const botNameEl = document.getElementById('botName');
         const latencyEl = document.getElementById('latency');
         const timerEl = document.getElementById('timer');
-        const timerContainer = document.getElementById('timer-container');
-
-        const settingsForm = document.getElementById('bot-settings-form');
+        const timerContainer = document.getElementById('timerContainer');
+        const cpuUsageEl = document.getElementById('cpuUsage');
+        const memoryUsageEl = document.getElementById('memoryUsage');
+        const uptimeEl = document.getElementById('uptime');
+        
+        // Form elements
+        const settingsForm = document.getElementById('botSettingsForm');
         const botNameInput = document.getElementById('botNameInput');
         const ownerNameInput = document.getElementById('ownerNameInput');
         const ownerLidJidInput = document.getElementById('ownerLidJidInput');
         const ownerPhoneJidInput = document.getElementById('ownerPhoneJidInput');
-        const saveStatus = document.getElementById('save-status');
-        const updateButton = document.getElementById('update-button');
+        const saveStatus = document.getElementById('saveStatus');
+        const updateButton = document.getElementById('updateButton');
+        const updateStatus = document.getElementById('updateStatus');
 
         let countdownInterval;
+
+        function showStatus(element, message, type = 'success') {
+            element.textContent = message;
+            element.className = `status-message show ${type}`;
+            setTimeout(() => {
+                element.classList.remove('show');
+            }, 3000);
+        }
 
         function startTimer(duration) {
             let timer = duration;
             timerEl.textContent = timer;
             timerContainer.style.display = 'block';
 
-            clearInterval(countdownInterval); // Limpiar cualquier temporizador anterior
+            clearInterval(countdownInterval);
             countdownInterval = setInterval(() => {
                 timer--;
                 timerEl.textContent = timer;
@@ -114,64 +664,94 @@
                 ownerNameInput.value = settings.ownerName;
                 ownerLidJidInput.value = settings.ownerLidJid || '';
                 ownerPhoneJidInput.value = settings.ownerPhoneJid || '';
-                botNameEl.textContent = settings.botName;
+                if (botNameEl) botNameEl.textContent = settings.botName;
             } catch (error) {
                 console.error('Error fetching settings:', error);
-                saveStatus.textContent = 'Error al cargar la configuración.';
+                showStatus(saveStatus, 'Error al cargar la configuración.', 'error');
             }
         }
 
+        // Settings form handler
         settingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            saveStatus.textContent = 'Guardando...';
+            showStatus(saveStatus, 'Guardando...');
+            
             const newSettings = {
                 botName: botNameInput.value,
                 ownerName: ownerNameInput.value,
                 ownerLidJid: ownerLidJidInput.value,
                 ownerPhoneJid: ownerPhoneJidInput.value
             };
+            
             try {
                 const response = await fetch('/api/settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(newSettings)
                 });
+                
                 if (!response.ok) throw new Error('Respuesta no fue OK');
                 const result = await response.json();
-                saveStatus.textContent = result.message;
-                setTimeout(() => saveStatus.textContent = '', 3000);
+                showStatus(saveStatus, result.message, 'success');
             } catch (error) {
-                saveStatus.textContent = 'Error al guardar.';
+                showStatus(saveStatus, 'Error al guardar.', 'error');
                 console.error('Error saving settings:', error);
             }
         });
 
+        // Update button handler
+        updateButton.addEventListener('click', async () => {
+            const confirmed = confirm('¿Estás seguro de que quieres actualizar el bot? Esto reiniciará el proceso.');
+            if (confirmed) {
+                showStatus(updateStatus, 'Iniciando actualización...');
+                try {
+                    const response = await fetch('/api/update', { method: 'POST' });
+                    const result = await response.json();
+                    showStatus(updateStatus, result.message, 'success');
+                } catch (error) {
+                    showStatus(updateStatus, 'Error al iniciar la actualización.', 'error');
+                    console.error('Error on update:', error);
+                }
+            }
+        });
+
+        // Socket event handlers
         socket.on('qr', (qr) => {
             new QRious({
                 element: document.getElementById('qr'),
                 value: qr,
                 size: 250,
             });
-            qrContainer.style.display = 'block';
-            dashboard.style.display = 'none';
+            
+            // Switch to connection section
+            sections.forEach(section => section.classList.remove('active'));
+            document.getElementById('connection').classList.add('active');
+            navItems.forEach(nav => nav.classList.remove('active'));
+            document.querySelector('.nav-item[data-section="connection"]').classList.add('active');
+            
             timerContainer.innerHTML = '<p>El QR se actualizará en <span id="timer">30</span>s</p>';
-            // Re-asignar timerEl porque el innerHTML lo borró
             const newTimerEl = document.getElementById('timer');
-            timerEl = newTimerEl ? newTimerEl : document.createElement('span'); // Fallback
-            startTimer(30);
+            if (newTimerEl) {
+                timerEl = newTimerEl;
+                startTimer(30);
+            }
         });
 
         socket.on('connected', (data) => {
-            qrContainer.style.display = 'none';
-            dashboard.style.display = 'block';
-            clearInterval(countdownInterval); // Detener el temporizador al conectar
-            botNameEl.textContent = data.botName;
+            clearInterval(countdownInterval);
+            if (botNameEl) botNameEl.textContent = data.botName;
             fetchSettings();
+            
+            // Switch to dashboard section
+            sections.forEach(section => section.classList.remove('active'));
+            document.getElementById('dashboard').classList.add('active');
+            navItems.forEach(nav => nav.classList.remove('active'));
+            document.querySelector('.nav-item[data-section="dashboard"]').classList.add('active');
         });
 
         socket.on('bot-info', (data) => {
-            latencyEl.textContent = `${data.latency}`;
-            botNameEl.textContent = data.botName;
+            if (latencyEl) latencyEl.textContent = `${data.latency}`;
+            if (botNameEl) botNameEl.textContent = data.botName;
         });
 
         socket.on('settings-updated', (newSettings) => {
@@ -179,42 +759,26 @@
             ownerNameInput.value = newSettings.ownerName;
             ownerLidJidInput.value = newSettings.ownerLidJid || '';
             ownerPhoneJidInput.value = newSettings.ownerPhoneJid || '';
-            botNameEl.textContent = newSettings.botName;
+            if (botNameEl) botNameEl.textContent = newSettings.botName;
             console.log('Configuración del frontend actualizada por evento de socket.');
         });
 
         socket.on('disconnect', () => {
-            qrContainer.style.display = 'block';
-            dashboard.style.display = 'none';
+            // Switch back to connection section
+            sections.forEach(section => section.classList.remove('active'));
+            document.getElementById('connection').classList.add('active');
+            navItems.forEach(nav => nav.classList.remove('active'));
+            document.querySelector('.nav-item[data-section="connection"]').classList.add('active');
         });
-
-        // --- Server Stats Handler ---
-        const cpuUsageEl = document.getElementById('cpu-usage');
-        const memoryUsageEl = document.getElementById('memory-usage');
-        const uptimeEl = document.getElementById('uptime');
 
         socket.on('server-stats', (data) => {
-            if(cpuUsageEl) cpuUsageEl.textContent = data.cpu;
-            if(memoryUsageEl) memoryUsageEl.textContent = data.memory;
-            if(uptimeEl) uptimeEl.textContent = data.uptime;
+            if (cpuUsageEl) cpuUsageEl.textContent = data.cpu;
+            if (memoryUsageEl) memoryUsageEl.textContent = data.memory;
+            if (uptimeEl) uptimeEl.textContent = data.uptime;
         });
 
-        // --- Update Button Handler ---
-        updateButton.addEventListener('click', async () => {
-            const confirmed = confirm('¿Estás seguro de que quieres actualizar el bot? Esto reiniciará el proceso.');
-            if (confirmed) {
-                saveStatus.textContent = 'Iniciando actualización...';
-                try {
-                    const response = await fetch('/api/update', { method: 'POST' });
-                    const result = await response.json();
-                    saveStatus.textContent = result.message;
-                    // El bot se reiniciará, no es necesario hacer nada más aquí.
-                } catch (error) {
-                    saveStatus.textContent = 'Error al iniciar la actualización.';
-                    console.error('Error on update:', error);
-                }
-            }
-        });
+        // Initialize
+        fetchSettings();
     </script>
 </body>
 </html>
