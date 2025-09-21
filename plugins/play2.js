@@ -2,14 +2,14 @@ import ytSearch from 'yt-search';
 import ytdl from 'ytdl-core';
 
 export default {
-    name: 'play',
+    name: 'play2',
     category: 'downloader',
-    description: 'Busca y descarga una canción de YouTube.',
+    description: 'Busca y descarga un video de YouTube.',
 
     async execute({ sock, msg, args }) {
         const query = args.join(' ');
         if (!query) {
-            return await sock.sendMessage(msg.key.remoteJid, { text: 'Por favor, proporciona el nombre de una canción.' }, { quoted: msg });
+            return await sock.sendMessage(msg.key.remoteJid, { text: 'Por favor, proporciona el nombre de un video.' }, { quoted: msg });
         }
 
         try {
@@ -27,12 +27,11 @@ export default {
 
             await sock.sendMessage(msg.key.remoteJid, {
                 image: { url: video.thumbnail },
-                caption: caption + '\n\nDescargando audio, por favor espera...'
+                caption: caption + '\n\nDescargando video, por favor espera...'
             }, { quoted: msg });
 
             const stream = ytdl(videoUrl, {
-                filter: 'audioonly',
-                quality: 'lowestaudio'
+                quality: 'highest'
             });
 
             const chunks = [];
@@ -43,19 +42,20 @@ export default {
             stream.on('end', async () => {
                 const buffer = Buffer.concat(chunks);
                 await sock.sendMessage(msg.key.remoteJid, {
-                    audio: buffer,
-                    mimetype: 'audio/mp4'
+                    video: buffer,
+                    mimetype: 'video/mp4',
+                    caption: caption
                 }, { quoted: msg });
             });
 
             stream.on('error', async (err) => {
-                console.error('Error al descargar el audio:', err);
-                await sock.sendMessage(msg.key.remoteJid, { text: 'Ocurrió un error al descargar el audio.' }, { quoted: msg });
+                console.error('Error al descargar el video:', err);
+                await sock.sendMessage(msg.key.remoteJid, { text: 'Ocurrió un error al descargar el video.' }, { quoted: msg });
             });
 
         } catch (error) {
-            console.error('Error en el comando play:', error);
-            await sock.sendMessage(msg.key.remoteJid, { text: 'Ocurrió un error al buscar la canción.' }, { quoted: msg });
+            console.error('Error en el comando play2:', error);
+            await sock.sendMessage(msg.key.remoteJid, { text: 'Ocurrió un error al buscar el video.' }, { quoted: msg });
         }
     }
 };
