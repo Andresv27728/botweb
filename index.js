@@ -9,7 +9,6 @@ import { readSettings } from './lib/functions.js';
 
 const logger = pino({ level: 'silent' }).child({ level: 'silent' });
 const commands = new Map();
-export const playMessageCache = new Map(); // Cache for play command messages
 let botSettings = {};
 
 // --- CARGADOR DE COMANDOS ---
@@ -71,49 +70,6 @@ async function connectToWhatsApp() {
 
         const remoteJid = msg.key.remoteJid;
         const messageType = Object.keys(msg.message)[0];
-
-        // --- MANEJO DE REACCIONES PARA DESCARGAS ---
-        if (messageType === 'protocolMessage' && msg.message.protocolMessage.type === 'MESSAGE_REACTION') {
-            const reaction = msg.message.protocolMessage;
-            const reactedMsgKey = reaction.key;
-
-            if (playMessageCache.has(reactedMsgKey.id)) {
-                const { url, quotedMsg } = playMessageCache.get(reactedMsgKey.id);
-                const emoji = reaction.reaction.text;
-                let action;
-
-                if (emoji === '♬') {
-                    action = 'download_audio';
-                } else if (emoji === '📹') {
-                    action = 'download_video';
-                } else {
-                    return; // Ignorar otras reacciones
-                }
-
-                await sock.sendMessage(remoteJid, { text: 'Descargando, por favor espera...' }, { quoted: quotedMsg });
-                try {
-                    const apiUrl = action === 'download_audio'
-                        ? `https://myapiadonix.vercel.app/api/ytmp3?url=${encodeURIComponent(url)}`
-                        : `https://myapiadonix.vercel.app/api/ytmp4?url=${encodeURIComponent(url)}`;
-
-                    const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
-                    const mediaBuffer = Buffer.from(response.data, 'binary');
-
-                    if (action === 'download_audio') {
-                        await sock.sendMessage(remoteJid, { audio: mediaBuffer, mimetype: 'audio/mp4' }, { quoted: quotedMsg });
-                    } else {
-                        await sock.sendMessage(remoteJid, { video: mediaBuffer, mimetype: 'video/mp4' }, { quoted: quotedMsg });
-                    }
-                } catch (error) {
-                    console.error("Error en la descarga por reacción:", error);
-                    await sock.sendMessage(remoteJid, { text: 'Hubo un error al descargar el archivo.' }, { quoted: quotedMsg });
-                } finally {
-                    playMessageCache.delete(reactedMsgKey.id); // Limpiar el caché
-                }
-                return;
-            }
-        }
-
 
         // --- MANEJO DE COMANDOS DE TEXTO ---
         const messageContent = messageType === 'conversation' ? msg.message.conversation :
