@@ -174,7 +174,7 @@ async function start() {
         });
     }, 5000);
 
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.PORT || 3012;
     server.listen(PORT, () => {
         console.log(`Servidor escuchando en el puerto ${PORT}`);
         console.log(`Visita http://localhost:${PORT} para ver el QR y el dashboard.`);
