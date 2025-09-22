@@ -6,7 +6,7 @@ export default {
     category: 'downloader',
     description: 'Busca y descarga una canción de YouTube.',
 
-    async execute({ sock, msg, args }) {
+    async execute({ sock, msg, args, settings }) {
         const query = args.join(' ');
         if (!query) {
             return await sock.sendMessage(msg.key.remoteJid, { text: 'Por favor, proporciona el nombre de una canción.' }, { quoted: msg });
@@ -30,10 +30,17 @@ export default {
                 caption: caption + '\n\nDescargando audio, por favor espera...'
             }, { quoted: msg });
 
-            const stream = ytdl(videoUrl, {
+            const ytdlOptions = {
                 filter: 'audioonly',
-                quality: 'lowestaudio'
-            });
+                quality: 'lowestaudio',
+                requestOptions: {
+                    headers: {
+                        cookie: settings.youtubeCookies || '',
+                    },
+                },
+            };
+
+            const stream = ytdl(videoUrl, ytdlOptions);
 
             const chunks = [];
             stream.on('data', (chunk) => {

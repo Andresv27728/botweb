@@ -6,7 +6,7 @@ export default {
     category: 'downloader',
     description: 'Busca y descarga un video de YouTube.',
 
-    async execute({ sock, msg, args }) {
+    async execute({ sock, msg, args, settings }) {
         const query = args.join(' ');
         if (!query) {
             return await sock.sendMessage(msg.key.remoteJid, { text: 'Por favor, proporciona el nombre de un video.' }, { quoted: msg });
@@ -30,9 +30,16 @@ export default {
                 caption: caption + '\n\nDescargando video, por favor espera...'
             }, { quoted: msg });
 
-            const stream = ytdl(videoUrl, {
-                quality: 'highest'
-            });
+            const ytdlOptions = {
+                quality: 'highest',
+                requestOptions: {
+                    headers: {
+                        cookie: settings.youtubeCookies || '',
+                    },
+                },
+            };
+
+            const stream = ytdl(videoUrl, ytdlOptions);
 
             const chunks = [];
             stream.on('data', (chunk) => {
