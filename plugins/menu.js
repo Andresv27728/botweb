@@ -7,26 +7,39 @@ export default {
         const { botName, ownerName } = settings;
         const categories = {};
 
-        // Agrupar comandos por categoría
+        // Group commands by category, handling both string and array names
         commands.forEach(command => {
-            if (!command.category) return;
+            if (!command.category || command.category === 'owner') return; // Hide owner commands
+
+            const commandName = Array.isArray(command.name) ? command.name[0] : command.name;
+
             if (!categories[command.category]) {
                 categories[command.category] = [];
             }
-            categories[command.category].push(command);
+            // Avoid duplicates from aliases
+            if (!categories[command.category].some(c => c.name.includes(commandName))) {
+                 categories[command.category].push({
+                    name: Array.isArray(command.name) ? command.name.join(', ') : command.name,
+                    description: command.description || ''
+                });
+            }
         });
 
-        let menuText = `¡Hola! 👋 Soy ${botName}\n`;
-        menuText += `Aquí tienes la lista de mis comandos:\n\n`;
+        // Build the menu with borders
+        let menuText = `╔═══════ *${botName}* ═══════╗\n`;
+        menuText += `║\n`;
+        menuText += `║ ¡Hola! 👋 Aquí tienes mis comandos:\n`;
+        menuText += `║\n`;
 
         for (const category in categories) {
-            menuText += `*${category.charAt(0).toUpperCase() + category.slice(1)}*\n`;
+            menuText += `╠═ *${category.charAt(0).toUpperCase() + category.slice(1)}*\n`;
             categories[category].forEach(command => {
-                menuText += `  - \`${command.name}\`: ${command.description || ''}\n`;
+                menuText += `║  - \`${command.name}\`: ${command.description}\n`;
             });
-            menuText += '\n';
+            menuText += `║\n`;
         }
 
+        menuText += `╚══════════════════════╝\n`;
         menuText += `Creado por ${ownerName}.\n`;
 
         await sock.sendMessage(msg.key.remoteJid, { text: menuText }, { quoted: msg });

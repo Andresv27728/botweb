@@ -9,6 +9,7 @@ import { readSettings } from './lib/functions.js';
 
 const logger = pino({ level: 'silent' }).child({ level: 'silent' });
 const commands = new Map();
+export const playMessageCache = new Map(); // Cache for play command messages
 let botSettings = {};
 
 // --- CARGADOR DE COMANDOS ---
@@ -21,8 +22,11 @@ async function loadCommands() {
             const commandModule = await import(path.join('file://', pluginsDir, file));
             const command = commandModule.default;
             if (command && command.name) {
-                commands.set(command.name, command);
-                console.log(`Comando cargado: ${command.name}`);
+                const commandNames = Array.isArray(command.name) ? command.name : [command.name];
+                for (const name of commandNames) {
+                    commands.set(name, command);
+                    console.log(`Comando cargado: ${name}`);
+                }
             }
         } catch (error) {
             console.error(`Error al cargar el comando ${file}:`, error);
@@ -71,6 +75,71 @@ async function connectToWhatsApp() {
         const remoteJid = msg.key.remoteJid;
         const messageType = Object.keys(msg.message)[0];
 
+        // --- MANEJO DE ANTI-LINK ---
+        const messageContentForLinkCheck = messageType === 'conversation' ? msg.message.conversation :
+                                           messageType === 'extendedTextMessage' ? msg.message.extendedTextMessage.text : '';
+
+        if (remoteJid.endsWith('@g.us') && botSettings.antilinkGroups?.includes(remoteJid) && messageContentForLinkCheck) {
+            const linkRegex = /(https?:\/\/[^\s]+)/g;
+            if (linkRegex.test(messageContentForLinkCheck)) {
+                const groupMetadata = await sock.groupMetadata(remoteJid);
+                const senderParticipant = groupMetadata.participants.find(p => p.id === msg.sender);
+                const senderIsAdmin = senderParticipant?.role === 'admin' || senderParticipant?.role === 'superadmin';
+
+                const ownerJids = [botSettings.ownerLidJid, botSettings.ownerPhoneJid].filter(Boolean);
+                const senderIsOwner = ownerJids.includes(msg.sender);
+
+                if (!senderIsAdmin && !senderIsOwner) {
+                    await sock.sendMessage(remoteJid, { text: 'No se permiten enlaces en este grupo.' }, { quoted: msg });
+                    await sock.sendMessage(remoteJid, { delete: msg.key });
+                    return; // Stop further processing
+                }
+            }
+        }
+
+        // --- MANEJO DE REACCIONES PARA DESCARGAS ---
+        if (messageType === 'protocolMessage' && msg.message.protocolMessage.type === 'MESSAGE_REACTION') {
+            const reaction = msg.message.protocolMessage;
+            const reactedMsgKey = reaction.key;
+
+            if (playMessageCache.has(reactedMsgKey.id)) {
+                const { url, quotedMsg } = playMessageCache.get(reactedMsgKey.id);
+                const emoji = reaction.reaction.text;
+                let action;
+
+                if (emoji === '♬') {
+                    action = 'download_audio';
+                } else if (emoji === '📹') {
+                    action = 'download_video';
+                } else {
+                    return; // Ignorar otras reacciones
+                }
+
+                await sock.sendMessage(remoteJid, { text: 'Descargando, por favor espera...' }, { quoted: quotedMsg });
+                try {
+                    const apiUrl = action === 'download_audio'
+                        ? `https://myapiadonix.vercel.app/api/ytmp3?url=${encodeURIComponent(url)}`
+                        : `https://myapiadonix.vercel.app/api/ytmp4?url=${encodeURIComponent(url)}`;
+
+                    const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
+                    const mediaBuffer = Buffer.from(response.data, 'binary');
+
+                    if (action === 'download_audio') {
+                        await sock.sendMessage(remoteJid, { audio: mediaBuffer, mimetype: 'audio/mp4' }, { quoted: quotedMsg });
+                    } else {
+                        await sock.sendMessage(remoteJid, { video: mediaBuffer, mimetype: 'video/mp4' }, { quoted: quotedMsg });
+                    }
+                } catch (error) {
+                    console.error("Error en la descarga por reacción:", error);
+                    await sock.sendMessage(remoteJid, { text: 'Hubo un error al descargar el archivo.' }, { quoted: quotedMsg });
+                } finally {
+                    playMessageCache.delete(reactedMsgKey.id); // Limpiar el caché
+                }
+                return;
+            }
+        }
+
+
         // --- MANEJO DE COMANDOS DE TEXTO ---
         const messageContent = messageType === 'conversation' ? msg.message.conversation :
                                messageType === 'extendedTextMessage' ? msg.message.extendedTextMessage.text : '';
@@ -83,7 +152,8 @@ async function connectToWhatsApp() {
 
         if (command) {
             try {
-                await command.execute({ sock, msg, args, commands, settings: botSettings, io });
+                // Pass the actual command name used, for plugins that handle multiple commands
+                await command.execute({ sock, msg, args, command: commandName, commands, settings: botSettings, io });
             } catch (error) {
                 console.error(`Error al ejecutar el comando ${commandName}:`, error);
                 await sock.sendMessage(remoteJid, { text: 'Ocurrió un error al ejecutar el comando.' }, { quoted: msg });
