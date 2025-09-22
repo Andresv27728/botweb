@@ -1,5 +1,5 @@
 import ytSearch from 'yt-search';
-import ytdl from 'ytdl-core';
+import ytdl from '@distube/ytdl-core';
 
 export default {
     name: 'play',
