@@ -1,15 +1,19 @@
 import ytSearch from 'yt-search';
-import ytdl from '@distube/ytdl-core';
+import axios from 'axios';
 
 export default {
     name: 'play2',
     category: 'downloader',
-    description: 'Busca y descarga un video de YouTube.',
+    description: 'Busca y descarga un video de YouTube usando la API de Apify.',
 
     async execute({ sock, msg, args, settings }) {
         const query = args.join(' ');
         if (!query) {
             return await sock.sendMessage(msg.key.remoteJid, { text: 'Por favor, proporciona el nombre de un video.' }, { quoted: msg });
+        }
+
+        if (!settings.apifyToken) {
+            return await sock.sendMessage(msg.key.remoteJid, { text: 'El token de la API de Apify no está configurado. Por favor, añádelo al archivo settings.json.' }, { quoted: msg });
         }
 
         try {
@@ -30,39 +34,36 @@ export default {
                 caption: caption + '\n\nDescargando video, por favor espera...'
             }, { quoted: msg });
 
-            const ytdlOptions = {
-                quality: 'highest',
-                requestOptions: {
-                    headers: {
-                        cookie: settings.youtubeCookies || '',
-                    },
-                },
+            const apiUrl = `https://api.apify.com/v2/acts/scrapearchitect~youtube-video-downloader/run-sync-get-dataset-items?token=${settings.apifyToken}`;
+            const apiInput = {
+                video_urls: [{ url: videoUrl }],
+                desired_resolution: '720p', // A reasonable default quality
             };
 
-            const stream = ytdl(videoUrl, ytdlOptions);
+            const apiResponse = await axios.post(apiUrl, apiInput);
 
-            const chunks = [];
-            stream.on('data', (chunk) => {
-                chunks.push(chunk);
-            });
+            if (apiResponse.data && apiResponse.data.length > 0) {
+                const result = apiResponse.data[0];
+                const videoLink = result.merged_downloadable_link;
 
-            stream.on('end', async () => {
-                const buffer = Buffer.concat(chunks);
-                await sock.sendMessage(msg.key.remoteJid, {
-                    video: buffer,
-                    mimetype: 'video/mp4',
-                    caption: caption
-                }, { quoted: msg });
-            });
-
-            stream.on('error', async (err) => {
-                console.error('Error al descargar el video:', err);
-                await sock.sendMessage(msg.key.remoteJid, { text: 'Ocurrió un error al descargar el video.' }, { quoted: msg });
-            });
+                if (videoLink) {
+                    const videoBuffer = await axios.get(videoLink, { responseType: 'arraybuffer' });
+                    await sock.sendMessage(msg.key.remoteJid, {
+                        video: Buffer.from(videoBuffer.data, 'binary'),
+                        mimetype: 'video/mp4',
+                        caption: caption
+                    }, { quoted: msg });
+                } else {
+                    throw new Error('El API no devolvió un enlace de video.');
+                }
+            } else {
+                throw new Error('La respuesta del API estaba vacía o en un formato incorrecto.');
+            }
 
         } catch (error) {
             console.error('Error en el comando play2:', error);
-            await sock.sendMessage(msg.key.remoteJid, { text: 'Ocurrió un error al buscar el video.' }, { quoted: msg });
+            const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
+            await sock.sendMessage(msg.key.remoteJid, { text: `Ocurrió un error al descargar el video: ${errorMessage}` }, { quoted: msg });
         }
     }
 };
