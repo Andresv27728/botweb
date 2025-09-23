@@ -1,13 +1,20 @@
 import { Boom } from '@hapi/boom';
 import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
-import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import { server, io, appEvents } from './server.js';
 import { readSettings } from './lib/functions.js';
 
-const logger = pino({ level: 'silent' }).child({ level: 'silent' });
+const logger = {
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+    debug: () => {},
+    fatal: () => {},
+    trace: () => {},
+    child: () => this,
+};
 const commands = new Map();
 let botSettings = {};
 
