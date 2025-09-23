@@ -13,7 +13,7 @@ const logger = {
     debug: () => {},
     fatal: () => {},
     trace: () => {},
-    child: () => this,
+    child: function() { return this; },
 };
 const commands = new Map();
 let botSettings = {};
