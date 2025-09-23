@@ -27,24 +27,23 @@ export default {
 
             await sock.sendMessage(msg.key.remoteJid, {
                 image: { url: video.thumbnail },
-                caption: caption + '\n\nDescargando video, por favor espera...'
+                caption: caption + '\n\nDescargando audio, por favor espera...'
             }, { quoted: msg });
 
-            // Use the ytdl helper to get the video link
-            const result = await ytdl(video.url, 'mp4');
+            // Use the ytdl helper to get the audio link
+            const result = await ytdl(video.url, 'mp3');
 
-            // Download the video buffer from the link
-            const videoBuffer = await axios.get(result.url, { responseType: 'arraybuffer' });
+            // Download the audio buffer from the link
+            const audioBuffer = await axios.get(result.url, { responseType: 'arraybuffer' });
 
             await sock.sendMessage(msg.key.remoteJid, {
-                video: Buffer.from(videoBuffer.data, 'binary'),
-                mimetype: 'video/mp4',
-                caption: caption
+                audio: Buffer.from(audioBuffer.data, 'binary'),
+                mimetype: 'audio/mp4' // M4A is a common audio format for this
             }, { quoted: msg });
 
         } catch (error) {
             console.error('Error en el comando play:', error);
-            await sock.sendMessage(msg.key.remoteJid, { text: `Ocurrió un error al descargar el video: ${error.message}` }, { quoted: msg });
+            await sock.sendMessage(msg.key.remoteJid, { text: `Ocurrió un error al descargar el audio: ${error.message}` }, { quoted: msg });
         }
     }
 };
